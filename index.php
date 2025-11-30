@@ -130,6 +130,7 @@ session_start();
                     <option value="coordinator">Event Coordinator</option>
                     <option value="mentor">Faculty Mentor</option>
                     <option value="club">Club Admin</option>
+                    <option value="judge">Judge</option>
                 </select>
             </div>
 

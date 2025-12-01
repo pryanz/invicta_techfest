@@ -104,11 +104,11 @@ require 'includes/db_connect.php';
 
             <!-- Show Accommodation tab ONLY for Participants -->
             <?php if(isset($_SESSION['user_id']) && $_SESSION['role'] == 'participant'): ?>
-                <a href="accommodation.php" style="color:#e94560;">🏠 Book Stay</a>
+                <a href="accommodation.php">Book Stay</a>
             <?php endif; ?>
 
             <?php if(isset($_SESSION['user_id'])): ?>
-                <a href="dashboard_<?php echo $_SESSION['role']; ?>.php" style="color: #4cd137;">Dashboard</a>
+                <a href="dashboard_<?php echo $_SESSION['role']; ?>.php">Dashboard</a>
                 <a href="logout.php">Logout</a>
             <?php else: ?>
                 <a href="index.php">Login / Register</a>
@@ -164,13 +164,11 @@ require 'includes/db_connect.php';
                         
                         <!-- UPDATED: Date & Time Display -->
                         <div class="event-meta">
-                            <!-- Date: Dec 10, 2025 -->
                             <span>📅 <?php echo date('M d, Y', strtotime($row['event_date'])); ?></span>
-                            <!-- Time: 02:00 PM (Handles SQL TIME type perfectly) -->
+                            <!-- Time Check: if event_time exists, show it -->
                             <span>⏰ <?php echo (!empty($row['event_time'])) ? date('h:i A', strtotime($row['event_time'])) : 'TBA'; ?></span>
                         </div>
 
-                        <!-- UPDATED: Venue Display -->
                         <div class="event-venue">
                             📍 <?php echo htmlspecialchars($row['venue']); ?>
                         </div>
@@ -201,12 +199,14 @@ require 'includes/db_connect.php';
         <h2 id="accommodation" style="border-bottom: 2px solid #e94560; display:inline-block; margin:60px 0 30px 0; color: #fff;">Accommodation Options</h2>
         <div class="grid-container">
             <?php
-            // Logic: Join room_types + accommodation to calculate availability
-            $sql_rooms = "SELECT room_type, cost, capacity, 
-                          SUM(capacity - current_occupancy) as beds_left 
-                          FROM accommodation 
-                          GROUP BY room_type 
-                          ORDER BY cost ASC";
+            // NEW LOGIC: Join room_types + accommodation to calculate availability
+            // This groups by Type ID and sums up capacity vs occupancy
+            $sql_rooms = "SELECT rt.type_name, rt.cost, rt.capacity, 
+                        SUM(rt.capacity - a.current_occupancy) as beds_left 
+                        FROM room_types rt 
+                        JOIN accommodation a ON rt.type_id = a.type_id 
+                        GROUP BY rt.type_id 
+                        ORDER BY rt.cost ASC";
             $rooms = $conn->query($sql_rooms);
 
             if ($rooms->num_rows > 0) {
@@ -214,7 +214,7 @@ require 'includes/db_connect.php';
             ?>
             <div class="card">
                 <div class="card-body" style="text-align:center;">
-                    <h3 style="color: #fff; margin-bottom: 10px;"><?php echo htmlspecialchars($r['room_type']); ?></h3>
+                    <h3 style="color: #fff; margin-bottom: 10px;"><?php echo htmlspecialchars($r['type_name']); ?></h3>
                     
                     <p style="font-size:2rem; font-weight:bold; margin:10px 0; color: #4cd137;">
                         ₹<?php echo number_format($r['cost']); ?>
@@ -224,6 +224,7 @@ require 'includes/db_connect.php';
                         Capacity: <?php echo $r['capacity']; ?> Person(s) / Room
                     </p>
 
+                    <!-- Availability Indicator -->
                     <?php if($r['beds_left'] > 0): ?>
                         <div style="display:inline-block; border: 1px solid #4cd137; color: #4cd137; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
                             🟢 <?php echo $r['beds_left']; ?> Beds Available
@@ -238,7 +239,7 @@ require 'includes/db_connect.php';
             <?php 
                 endwhile; 
             } else {
-                echo "<p style='color: #a2a8d3;'>Accommodation details coming soon.</p>";
+                echo "<p style='color: #a2a8d3;'>No accommodation added yet.</p>";
             }
             ?>
         </div>

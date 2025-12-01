@@ -1,99 +1,162 @@
 <?php
-require 'includes/db.php';
+// seed.php - POPULATE DATABASE WITH DUMMY DATA
+require 'includes/db_connect.php';
 
-echo "<html><body style='font-family: sans-serif; background: #1a1a2e; color: #fff; padding: 2rem; line-height: 1.6;'>";
-echo "<div style='max-width: 800px; margin: 0 auto; background: #16213e; padding: 20px; border-radius: 10px; border: 1px solid #e94560;'>";
-echo "<h2 style='color: #e94560; border-bottom: 1px solid #e94560; padding-bottom: 10px;'>🚀 Seeding Invicta Database...</h2>";
+// CSS for nice output
+echo "<style>body{background:#1a1a2e; color:#fff; font-family:sans-serif; padding:20px;} .success{color:#4cd137;} .error{color:#e84118;} .info{color:#a2a8d3;}</style>";
+echo "<h1>🌱 Seeding Database...</h1>";
 
-// 1. DISABLE FOREIGN KEYS TO ALLOW TRUNCATION
+// 1. CLEANUP (Wipe existing data to prevent duplicates)
 $conn->query("SET FOREIGN_KEY_CHECKS = 0");
 $tables = [
-    'users', 'clubs', 'events', 'accommodation', 
-    'teams', 'team_members', 'registrations', 
-    'bookings', 'sponsors', 'results'
+    'registrations', 'event_judges', 'forms', 'bookings', 'teams', 'events', 
+    'accommodation', 'room_types', 'judges', 'coordinators', 'clubs', 'mentors', 'participants', 'sponsors'
 ];
 
-foreach($tables as $t) {
-    if($conn->query("TRUNCATE TABLE $t")) {
-        echo "<span style='color: #009FFD;'>✔ Cleared table: $t</span><br>";
+foreach ($tables as $table) {
+    if ($conn->query("TRUNCATE TABLE $table")) {
+        echo "<div class='info'>Cleared table: $table</div>";
     } else {
-        echo "<span style='color: red;'>✘ Error clearing $t: " . $conn->error . "</span><br>";
+        echo "<div class='error'>Error clearing $table: " . $conn->error . "</div>";
     }
 }
 $conn->query("SET FOREIGN_KEY_CHECKS = 1");
-echo "<hr style='border-color: #0f3460;'>";
+echo "<hr>";
 
-// 2. COMMON PASSWORD ('12345')
-$pass = password_hash("12345", PASSWORD_DEFAULT);
+// ======================================================
+// 2. INSERT INDEPENDENT DATA (Level 1)
+// ======================================================
 
-// 3. INSERT CLUBS
-$sql_clubs = "INSERT INTO clubs (club_id, club_name) VALUES 
-(1, 'CodeGeeks'), 
-(2, 'RoboTech'), 
-(3, 'Literary Society'), 
-(4, 'Gaming Guild')";
+// --- A. PARTICIPANTS ---
+// Password for everyone is '12345'
+$sql = "INSERT INTO participants (name, email, password, phone, college, department, year) VALUES 
+('Rahul Sharma', 'rahul@test.com', '12345', '9876543210', 'IIT Bombay', 'CSE', '3rd'),
+('Priya Verma', 'priya@test.com', '12345', '9123456780', 'NIT Trichy', 'ECE', '2nd'),
+('Amit Kumar', 'amit@test.com', '12345', '9988776655', 'BITS Pilani', 'MECH', '4th'),
+('Sara Ali', 'sara@test.com', '12345', '8877665544', 'VIT', 'CSE', '1st')";
 
-if($conn->query($sql_clubs)) echo "✅ Clubs Created<br>";
+if($conn->query($sql)) echo "<div class='success'>✅ Added Participants (User: rahul@test.com / 12345)</div>";
+else echo "<div class='error'>❌ Participants Error: " . $conn->error . "</div>";
 
-// 4. INSERT USERS (Participants, Organizers, Judges)
-// Organizer & Judge
-$sql_users = "INSERT INTO users (user_id, name, email, password, role, phone, college) VALUES 
-(1, 'Admin Organizer', 'admin@invicta.com', '$pass', 'organizer', '9999999999', 'IIT Bombay'),
-(2, 'Dr. Alan Turing', 'judge@invicta.com', '$pass', 'judge', '8888888888', 'Research Inst')";
+// --- B. MENTORS ---
+$sql = "INSERT INTO mentors (name, email, password, department, phone, designation) VALUES 
+('Dr. Anjali Gupta', 'anjali@faculty.edu', '12345', 'CSE', '9876500001', 'Assistant Professor'),
+('Prof. Vikram Singh', 'vikram@faculty.edu', '12345', 'ECE', '9876500002', 'HOD')";
 
-// Participants
-$sql_users .= ", (3, 'Alice Leader', 'alice@test.com', '$pass', 'participant', '7777777777', 'NIT Trichy')";
-$sql_users .= ", (4, 'Bob Member', 'bob@test.com', '$pass', 'participant', '6666666666', 'VIT Vellore')";
-$sql_users .= ", (5, 'Charlie Solo', 'charlie@test.com', '$pass', 'participant', '5555555555', 'SRM University')";
+if($conn->query($sql)) echo "<div class='success'>✅ Added Mentors (User: anjali@faculty.edu / 12345)</div>";
 
-if($conn->query($sql_users)) echo "✅ Users Created (Login Password: 12345)<br>";
+// --- C. COORDINATORS ---
+$sql = "INSERT INTO coordinators (name, email, password, phone) VALUES 
+('Rohan Das', 'rohan@coord.com', '12345', '7778889990'),
+('Sneha Roy', 'sneha@coord.com', '12345', '6665554440')";
 
-// 5. INSERT ACCOMMODATION
-$sql_accom = "INSERT INTO accommodation (room_type, capacity, cost_per_night, location) VALUES 
-('Luxury Single', 1, 1200.00, 'Block A - VIP'),
-('Double Shared', 2, 600.00, 'Block B'),
-('Dormitory', 10, 200.00, 'Block C')";
+if($conn->query($sql)) echo "<div class='success'>✅ Added Coordinators (User: rohan@coord.com / 12345)</div>";
 
-if($conn->query($sql_accom)) echo "✅ Accommodation Options Added<br>";
+// --- D. CLUBS ---
+$sql = "INSERT INTO clubs (club_name, email, password, description) VALUES 
+('Coding Club', 'code@club.com', '12345', 'For the love of algorithms and coffee.'),
+('Robotics Club', 'robo@club.com', '12345', 'Building the future, one bot at a time.')";
 
-// 6. INSERT EVENTS (Dates set to Dec 2025 for Countdown)
-// Added image_path column and values
-$sql_events = "INSERT INTO events (event_id, event_name, description, event_date, venue, entry_fee, club_id, status, image_path) VALUES 
-(1, 'Hack-a-Thon 2025', 'The ultimate 24-hour coding marathon. Build, Deploy, Win.', '2025-12-10 09:00:00', 'Main Auditorium', 500.00, 1, 'upcoming', 'hackathon.jpg'),
-(2, 'RoboWar', 'Build your bot and destroy the competition in the arena.', '2025-12-12 14:00:00', 'Open Ground', 1000.00, 2, 'upcoming', 'robowar.jpg'),
-(3, 'Valorant LAN', '5v5 Tactical Shooter Tournament with huge prize pool.', '2025-12-11 10:00:00', 'Computer Lab 3', 250.00, 4, 'upcoming', 'valorant.jpg'),
-(4, 'Debate: AI vs Human', 'The future of humanity discussed by top minds.', '2025-12-13 11:00:00', 'Seminar Hall', 100.00, 3, 'live', 'debate.jpg')";
+if($conn->query($sql)) echo "<div class='success'>✅ Added Clubs (User: code@club.com / 12345)</div>";
 
-if($conn->query($sql_events)) echo "✅ Events Published with Future Dates & Image Paths<br>";
+// --- E. JUDGES ---
+$sql = "INSERT INTO judges (name, affiliation, expertise, email, phone, password) VALUES 
+('Sundar Pichai', 'Google', 'Software Engineering', 'sundar@google.com', '1010101010', '12345'),
+('Elon Musk', 'SpaceX', 'Robotics & AI', 'elon@spacex.com', '2020202020', '12345')";
 
-// 7. INSERT SPONSORS
-$sql_sponsors = "INSERT INTO sponsors (name) VALUES ('Google'), ('RedBull'), ('Nvidia'), ('GitHub')";
-if($conn->query($sql_sponsors)) echo "✅ Sponsors Added<br>";
+if($conn->query($sql)) echo "<div class='success'>✅ Added Judges (User: sundar@google.com / 12345)</div>";
 
-// 8. INSERT TEAMS & MEMBERS
-// Alice creates a team "Invincibles"
-$conn->query("INSERT INTO teams (team_id, team_name, leader_id) VALUES (1, 'Invincibles', 3)");
+// --- F. ROOM TYPES (Accommodation Menu) ---
+$sql = "INSERT INTO room_types (type_name, cost, capacity) VALUES 
+('Dormitory (Non-AC)', 500.00, 4),
+('Double Sharing (AC)', 1200.00, 2),
+('Single Luxury', 2500.00, 1)";
 
-// Add Alice (Leader) and Bob (Member) to the team
-$conn->query("INSERT INTO team_members (team_id, user_id) VALUES (1, 3), (1, 4)");
+if($conn->query($sql)) echo "<div class='success'>✅ Added Room Types</div>";
 
-echo "✅ Team 'Invincibles' created (Leader: Alice, Member: Bob)<br>";
+// --- G. SPONSORS ---
+$sql = "INSERT INTO sponsors (organization_name, phone, email) VALUES 
+('Red Bull', '1112223333', 'sponsor@redbull.com'),
+('GitHub', '4445556666', 'community@github.com')";
 
-// 9. INSERT REGISTRATIONS
-// 'Invincibles' registers for 'Hack-a-Thon'
-$conn->query("INSERT INTO registrations (team_id, event_id, payment_status) VALUES (1, 1, 'completed')");
+if($conn->query($sql)) echo "<div class='success'>✅ Added Sponsors</div>";
 
-echo "✅ Team Registered for Hack-a-Thon<br>";
 
-echo "<hr style='border-color: #0f3460;'>";
-echo "<h3 style='color: #009FFD;'>🎉 Database Fully Seeded!</h3>";
-echo "<p><b>Test Credentials (Password: 12345):</b></p>";
-echo "<ul style='background: #0f3460; padding: 20px; border-radius: 5px;'>
-        <li><b>Participant (Leader):</b> alice@test.com</li>
-        <li><b>Participant (Member):</b> bob@test.com</li>
-        <li><b>Organizer:</b> admin@invicta.com</li>
-        <li><b>Judge:</b> judge@invicta.com</li>
-      </ul>";
-echo "<a href='auth.php' style='display: inline-block; background: #e94560; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Go to Login</a>";
-echo "</div></body></html>";
+// ======================================================
+// 3. INSERT DEPENDENT DATA (Level 2)
+// ======================================================
+
+// --- H. ACCOMMODATION (Inventory) ---
+// Room IDs will be 1, 2, 3, 4, 5...
+$sql = "INSERT INTO accommodation (room_number, type_id, current_occupancy) VALUES 
+('H-101', 1, 0), -- Dorm
+('H-102', 1, 0), -- Dorm
+('A-201', 2, 0), -- Double
+('A-202', 2, 0), -- Double
+('VIP-1', 3, 0)"; 
+
+if($conn->query($sql)) echo "<div class='success'>✅ Added Physical Rooms (Inventory)</div>";
+
+// --- I. EVENTS ---
+// Note: We leave image_path NULL or put a placeholder if you have one
+$sql = "INSERT INTO events (event_name, event_date, event_time, venue, description, club_id, coordinator_id, image_path) VALUES 
+('Hackathon 2025', '2025-12-10', '09:00:00', 'Main Auditorium', '24-hour coding marathon to solve real-world problems.', 1, 1, NULL),
+('RoboWar', '2025-12-11', '14:00:00', 'Open Ground', 'Battle of the bots. May the best metal win.', 2, 2, NULL),
+('Code Debugging', '2025-12-12', '10:00:00', 'Computer Lab 3', 'Find the bug, win the mug.', 1, 1, NULL)";
+
+if($conn->query($sql)) echo "<div class='success'>✅ Added Events</div>";
+
+
+// ======================================================
+// 4. INSERT LINKING DATA (Level 3 - The Glue)
+// ======================================================
+
+// --- J. TEAMS ---
+// Leader 1 (Rahul) -> Mentor 1
+// Leader 2 (Priya) -> Mentor 2
+$sql = "INSERT INTO teams (tname, leader, mentor) VALUES 
+('Code Warriors', 1, 1), 
+('Mecha Titans', 2, 2)";
+
+if($conn->query($sql)) echo "<div class='success'>✅ Added Teams</div>";
+
+// --- K. FORMS (Team Members) ---
+// Team 1 Members: Rahul(1), Amit(3)
+// Team 2 Members: Priya(2), Sara(4)
+$sql = "INSERT INTO forms (p_id, t_id) VALUES 
+(1, 1), (3, 1), 
+(2, 2), (4, 2)";
+
+if($conn->query($sql)) echo "<div class='success'>✅ Added Team Members</div>";
+
+// --- L. REGISTRATIONS (Teams -> Events) ---
+// Code Warriors -> Hackathon (ID 1)
+// Mecha Titans -> RoboWar (ID 2)
+$sql = "INSERT INTO registrations (team_id, event_id, score) VALUES 
+(1, 1, NULL),
+(2, 2, 85)"; // Pre-assign a score to test Judge Dashboard
+
+if($conn->query($sql)) echo "<div class='success'>✅ Registered Teams for Events</div>";
+
+// --- M. EVENT JUDGES ---
+// Sundar(1) judges Hackathon(1)
+// Elon(2) judges RoboWar(2)
+$sql = "INSERT INTO event_judges (event_id, judge_id) VALUES 
+(1, 1),
+(2, 2)";
+
+if($conn->query($sql)) echo "<div class='success'>✅ Assigned Judges to Events</div>";
+
+// --- N. BOOKINGS ---
+// Rahul(1) books Room 1 (Dorm H-101)
+$sql = "INSERT INTO bookings (participant_id, room_id, checkin_date, checkout_date) VALUES 
+(1, 1, '2025-12-10', '2025-12-12')";
+
+// Update occupancy for that room
+$conn->query("UPDATE accommodation SET current_occupancy = 1 WHERE room_id = 1");
+
+if($conn->query($sql)) echo "<div class='success'>✅ Created Accommodation Booking</div>";
+
+echo "<hr><h2>🎉 Database Seeded Successfully!</h2>";
+echo "<p><a href='index.php' style='color:#4cd137; font-size:1.2rem;'>Go to Login Page &rarr;</a></p>";
 ?>

@@ -16,7 +16,7 @@
                 <a href="dashboard_<?php echo $_SESSION['role']; ?>.php">Dashboard</a>
                 <a href="logout.php">Logout</a>
             <?php else: ?>
-                <a href="auth.php">Login / Register</a>
+                <a href="index.php">Login / Register</a>
             <?php endif; ?>
         </div>
     </div>

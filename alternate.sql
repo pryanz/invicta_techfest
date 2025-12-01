@@ -204,3 +204,45 @@ ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '12345';
 
 -- 2. (Optional) Set a specific password for a specific judge if you have one
 -- UPDATE judges SET password = 'securepassword' WHERE judge_id = 1;
+
+
+
+
+
+-- 1. DROP OLD TABLE (If it exists, to avoid conflicts)
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS bookings; -- We need to recreate this later to link to the new IDs
+DROP TABLE IF EXISTS accommodation;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 2. CREATE ROOM TYPES (The Menu: Price & Capacity)
+CREATE TABLE room_types (
+    type_id INT AUTO_INCREMENT PRIMARY KEY,
+    type_name VARCHAR(50) NOT NULL,  -- e.g., 'Triple Sharing AC'
+    cost DECIMAL(10,2) NOT NULL,     -- e.g., 500.00
+    capacity INT NOT NULL            -- e.g., 3
+);
+
+-- 3. CREATE ACCOMMODATION (The Inventory: Actual Rooms)
+CREATE TABLE accommodation (
+    room_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_number VARCHAR(20) NOT NULL, -- e.g., 'H-101', 'H-102'
+    type_id INT,
+    current_occupancy INT DEFAULT 0,  -- Starts at 0, goes up to capacity
+    
+    FOREIGN KEY (type_id) REFERENCES room_types(type_id) ON DELETE CASCADE
+);
+
+-- 4. RE-CREATE BOOKINGS TABLE (Links Student -> Specific Room)
+CREATE TABLE bookings (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    participant_id INT NOT NULL UNIQUE,
+    room_id INT NOT NULL,
+    checkin_date DATE NOT NULL,
+    checkout_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES accommodation(room_id) ON DELETE CASCADE
+);
+

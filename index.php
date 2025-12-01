@@ -127,8 +127,6 @@ session_start();
                 <select name="role" id="role" class="form-control" required>
                     <option value="" disabled selected>Select Role...</option>
                     <option value="participant">Participant (Student)</option>
-                    <option value="coordinator">Event Coordinator</option>
-                    <option value="mentor">Faculty Mentor</option>
                     <option value="club">Club Admin</option>
                     <option value="judge">Judge</option>
                 </select>

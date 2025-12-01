@@ -12,8 +12,6 @@ if (isset($_POST['btn_login'])) {
     
     switch ($role) {
         case 'participant': $table = "participants"; $id_column = "participant_id"; break;
-        case 'coordinator': $table = "coordinators"; $id_column = "coordinator_id"; break;
-        case 'mentor':      $table = "mentors";      $id_column = "mentor_id";      break;
         case 'club':        $table = "clubs";        $id_column = "club_id";        break;
         case 'judge':       $table = "judges";       $id_column = "judge_id";       break;
         default: die("Invalid Role Selected");
@@ -46,7 +44,7 @@ if (isset($_POST['btn_login'])) {
             </head>
             <body>
                 <div class="box">
-                    <h1>✅ Login Successful!</h1>
+                    <h1>Login Successful!</h1>
                     <p>Welcome, <b>' . htmlspecialchars($_SESSION['name']) . '</b>.</p>
                     <p>Loading your dashboard...</p>
                 </div>

@@ -87,7 +87,7 @@ if (isset($_POST['add_event'])) {
                 }
 
                 $conn->commit();
-                $message = "<script>alert('✅ Event Created Successfully!'); window.location.href='dashboard_club.php';</script>";
+                $message = "<script>alert('Event Created Successfully!'); window.location.href='dashboard_club.php';</script>";
             } else {
                 throw new Exception($stmt->error);
             }

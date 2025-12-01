@@ -2,7 +2,6 @@
 session_start();
 require 'includes/db_connect.php';
 
-// 1. SECURITY
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'participant') {
     header("Location: index.php");
     exit();
@@ -10,49 +9,55 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'participant') {
 
 if (isset($_POST['book_room'])) {
     $p_id = $_SESSION['user_id'];
-    $room_id = $_POST['room_id'];
+    $type_id = $_POST['type_id'];
     $checkin = $_POST['checkin'];
     $checkout = $_POST['checkout'];
 
-    // 2. DOUBLE CHECK: Does user already have a booking?
-    // (Prevents resubmission hacks)
-    $check_sql = "SELECT booking_id FROM bookings WHERE participant_id = $p_id";
-    $result = $conn->query($check_sql);
+    // Start Transaction (Crucial so two people don't grab the last bed at once)
+    $conn->begin_transaction();
 
-    if ($result->num_rows > 0) {
-        // Already booked
-        echo "<script>
-            alert('⚠️ You have already booked a room! Multiple bookings are not allowed.');
-            window.location.href='accommodation.php';
-        </script>";
-        exit();
+    try {
+        // 1. Double Check: Does user already have a booking?
+        $chk = $conn->query("SELECT booking_id FROM bookings WHERE participant_id = $p_id");
+        if($chk->num_rows > 0) {
+            throw new Exception("You already have a booking!");
+        }
+
+        // 2. FIND AVAILABLE ROOM (The Core Logic)
+        // Find the first room of this type where occupancy is LESS than capacity
+        $sql_find = "SELECT a.room_id, a.current_occupancy, rt.capacity 
+                    FROM accommodation a
+                    JOIN room_types rt ON a.type_id = rt.type_id
+                    WHERE a.type_id = ? AND a.current_occupancy < rt.capacity
+                    LIMIT 1 FOR UPDATE"; 
+                     // 'FOR UPDATE' locks the row so no one else writes to it until we are done
+        
+        $stmt = $conn->prepare($sql_find);
+        $stmt->bind_param("i", $type_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($row = $result->fetch_assoc()) {
+            $room_id = $row['room_id'];
+            
+            // 3. BOOK THE ROOM
+            $stmt_book = $conn->prepare("INSERT INTO bookings (participant_id, room_id, checkin_date, checkout_date) VALUES (?, ?, ?, ?)");
+            $stmt_book->bind_param("iiss", $p_id, $room_id, $checkin, $checkout);
+            $stmt_book->execute();
+
+            // 4. INCREASE OCCUPANCY
+            $stmt_upd = $conn->query("UPDATE accommodation SET current_occupancy = current_occupancy + 1 WHERE room_id = $room_id");
+
+            $conn->commit(); // Save everything
+            echo "<script>alert('Success! Room Allocated.'); window.location.href='accommodation.php';</script>";
+
+        } else {
+            throw new Exception("Sorry! All rooms of this type are fully booked.");
+        }
+
+    } catch (Exception $e) {
+        $conn->rollback(); // Undo changes if something went wrong
+        echo "<script>alert('Error: " . $e->getMessage() . "'); window.location.href='accommodation.php';</script>";
     }
-
-    // 3. VALIDATION: Check-out must be after Check-in
-    if (strtotime($checkout) <= strtotime($checkin)) {
-        echo "<script>
-            alert('❌ Error: Check-out date must be after Check-in date.');
-            window.location.href='accommodation.php';
-        </script>";
-        exit();
-    }
-
-    // 4. INSERT BOOKING
-    $stmt = $conn->prepare("INSERT INTO bookings (participant_id, room_id, checkin_date, checkout_date) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("iiss", $p_id, $room_id, $checkin, $checkout);
-
-    if ($stmt->execute()) {
-        echo "<script>
-            alert('✅ Room Booked Successfully!');
-            window.location.href='accommodation.php';
-        </script>";
-    } else {
-        echo "<script>
-            alert('Error: " . $conn->error . "');
-            window.location.href='accommodation.php';
-        </script>";
-    }
-} else {
-    header("Location: accommodation.php");
 }
 ?>
